@@ -4,6 +4,8 @@ from PyQt5.QtGui import QIcon, QIntValidator, QTransform
 from src.models.schedule import Schedule
 from typing import List
 import os
+from src.styles.theme import PALETTE
+from src.styles.icons import icon
 
 class Navigator(QWidget):
     """
@@ -34,7 +36,7 @@ class Navigator(QWidget):
         # --- LAYOUT SETUP ---
         # Main layout is horizontal with proper spacing and margins
         self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(10, 10, 10, 10)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(15)
         self.setLayout(self.layout)
         
@@ -48,7 +50,7 @@ class Navigator(QWidget):
         self.prev_btn = QPushButton()
         self.prev_btn.setObjectName("nav_button")
         self.prev_btn.setToolTip("Previous Schedule")
-        self.prev_btn.setFixedSize(40, 40)  # Fixed size for consistent appearance
+        self.prev_btn.setFixedSize(40, 40)
         
         # --- INPUT FIELD SETUP ---
         # Container for the schedule number input and label
@@ -73,8 +75,6 @@ class Navigator(QWidget):
         self.schedule_num.setValidator(validator)
         
         # Add input elements to their container
-        input_container.addWidget(self.info_label)
-        input_container.addWidget(self.schedule_num)
         
         # Next button setup (mirrors previous button)
         self.next_btn = QPushButton()
@@ -83,35 +83,21 @@ class Navigator(QWidget):
         self.next_btn.setFixedSize(40, 40)
         
         # Add navigation icons (with fallbacks)
-        next_icon_path = os.path.join(os.path.dirname(__file__), "../assets/next.png")
-        next_icon = QIcon(next_icon_path)
-        prev_icon = QIcon(next_icon_path)
-
-        # Rotate the next icon by 180 degrees for the previous button
-        if not prev_icon.isNull():
-            rotated_pixmap = next_icon.pixmap(32, 32).transformed(QTransform().rotate(180))
-            prev_icon = QIcon(rotated_pixmap)
-            self.prev_btn.setIcon(prev_icon)
-        else:
-            self.prev_btn.setText("◀")
-            
-        if not next_icon.isNull():
-            self.next_btn.setIcon(next_icon)
-        else:
-            self.next_btn.setText("▶")
+        self.prev_btn.setIcon(icon("chevron_left", 18, PALETTE["text"]))
+        self.next_btn.setIcon(icon("chevron_right", 18, PALETTE["text"]))
+        for button in (self.prev_btn, self.next_btn):
+            button.setCursor(Qt.PointingHandCursor)
 
         # --- ASSEMBLE NAVIGATION CONTROLS ---
         # Add all elements to the navigation container with proper spacing
-        nav_container.addStretch(1)  # Add flexible space on left
         nav_container.addWidget(self.prev_btn)
-        nav_container.addLayout(input_container)
+        nav_container.addWidget(self.schedule_num)
         nav_container.addWidget(self.next_btn)
-        nav_container.addStretch(1)  # Add flexible space on right
+        nav_container.addSpacing(6)
+        nav_container.addWidget(self.info_label)
         
         # Add navigation container to main layout with proper spacing
-        self.layout.addStretch(2)
         self.layout.addLayout(nav_container)
-        self.layout.addStretch(2)
         
         # --- CONNECT SIGNALS ---
         # Connect button clicks and input events to their handlers

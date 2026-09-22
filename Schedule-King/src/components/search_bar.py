@@ -15,15 +15,9 @@ class SearchBar(QWidget):
         # Create the search input field
         self.search_input = QLineEdit()
         self.search_input.setObjectName("course_search_bar")
-        self.search_input.setPlaceholderText("Search courses...")  # Set placeholder text
-        self.search_input.setStyleSheet("""
-            QLineEdit {
-                padding: 10px;
-                font-size: 12pt;
-                border: 2px solid #C5CAE9;
-                border-radius: 8px;
-            }
-        """)  # Apply custom styling to the input
+        self.search_input.setPlaceholderText("Search by course name or code...")
+        self.search_input.setClearButtonEnabled(True)
+        self.search_input.setMinimumHeight(40)
         self.search_input.textChanged.connect(self._handle_text_changed)  # Connect text change signal
         
         layout.addWidget(self.search_input)  # Add input to the layout

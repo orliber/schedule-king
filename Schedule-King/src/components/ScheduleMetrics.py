@@ -1,99 +1,68 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel, QSizePolicy
-from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt
 from src.models.schedule import Schedule
 
-class ScheduleMetrics(QFrame):
-    def __init__(self, schedule: Schedule, parent=None):
-        """
-        Initialize the ScheduleMetrics widget.
 
-        Args:
-            schedule (Schedule): The schedule object containing metrics.
-            parent: The parent widget (optional).
-        """
+class ScheduleMetrics(QFrame):
+    """A row of stat tiles summarising the displayed schedule."""
+
+    METRICS = [
+        ("active_days_label", "ACTIVE DAYS"),
+        ("gap_count_label", "GAPS"),
+        ("total_gap_time_label", "GAP HOURS"),
+        ("avg_start_time_label", "AVG. START"),
+        ("avg_end_time_label", "AVG. END"),
+        ("preference_score_label", "PREFERENCE MATCH"),
+    ]
+
+    def __init__(self, schedule: Schedule, parent=None):
         super().__init__(parent)
         self.schedule = schedule
         self.setObjectName("ScheduleMetrics")
+        self._values = {}
         self.init_ui()
+        self.set_schedule(schedule)
 
     def init_ui(self):
-        """
-        Set up the UI layout and add metric labels.
-        """
-        layout = QVBoxLayout()
-        layout.setSpacing(3)  
-        layout.setContentsMargins(10, 10, 10, 10)
-        self.setFixedHeight(200)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+        for obj_name, title in self.METRICS:
+            tile = QFrame()
+            tile.setObjectName("metric_tile")
+            tile_layout = QVBoxLayout(tile)
+            tile_layout.setContentsMargins(16, 10, 16, 10)
+            tile_layout.setSpacing(2)
+            name = QLabel(title)
+            name.setObjectName("metric_name")
+            value = QLabel("-")
+            value.setObjectName("metric_value")
+            value.setProperty("metric", obj_name)
+            tile_layout.addWidget(name)
+            tile_layout.addWidget(value)
+            layout.addWidget(tile, 1)
+            self._values[obj_name] = value
 
-        # Title label
-        title = QLabel("Schedule Metrics")
-        title.setObjectName("metrics_title_label")
-        title.setFont(QFont("Arial", 8, QFont.Bold))
-        title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
-
-        # Add metric labels
-        layout.addWidget(self._create_metric_label("Active Days", self.schedule.active_days, "active_days_label"))
-        layout.addWidget(self._create_metric_label("Gap Count", self.schedule.gap_count, "gap_count_label"))
-        layout.addWidget(self._create_metric_label("Total Gap Time (hours)", self.schedule.total_gap_time, "total_gap_time_label"))
-        layout.addWidget(self._create_metric_label("Average Start Time", self._format_time(self.schedule.avg_start_time), "avg_start_time_label"))
-        layout.addWidget(self._create_metric_label("Average End Time", self._format_time(self.schedule.avg_end_time), "avg_end_time_label"))
-        layout.addWidget(self._create_metric_labelP("Preference Score", self.schedule.preference_score, "preference_score_label"))
-
-        self.setLayout(layout)
-        self.setFixedWidth(250) 
-
-    def _create_metric_label(self, name, value, obj_name):
-        """
-        Helper to create a QLabel for a metric.
-
-        Args:
-            name (str): The name of the metric.
-            value: The value to display.
-            obj_name (str): The object name for styling.
-
-        Returns:
-            QLabel: The configured label.
-        """
-        label = QLabel(f"{name}: {value}")
-        label.setObjectName(obj_name)
-        label.setFont(QFont("Arial", 9))
-        return label
-    def _create_metric_labelP(self, name, value, obj_name):
-        """
-        Helper to create a QLabel for a metric.
-
-        Args:
-            name (str): The name of the metric.
-            value: The value to display.
-            obj_name (str): The object name for styling.
-
-        Returns:
-            QLabel: The configured label.
-        """
-        label = QLabel(f"{name}: {value} %")
-        label.setObjectName(obj_name)
-        label.setFont(QFont("Arial", 9))
-        return label
+    def set_schedule(self, schedule: Schedule):
+        """Refresh all tiles for a new schedule."""
+        self.schedule = schedule
+        try:
+            values = {
+                "active_days_label": str(schedule.active_days),
+                "gap_count_label": str(schedule.gap_count),
+                "total_gap_time_label": str(schedule.total_gap_time),
+                "avg_start_time_label": self._format_time(schedule.avg_start_time),
+                "avg_end_time_label": self._format_time(schedule.avg_end_time),
+                "preference_score_label": f"{schedule.preference_score}%",
+            }
+        except Exception:
+            values = {}
+        for obj_name, label in self._values.items():
+            label.setText(values.get(obj_name, "-"))
 
     def _format_time(self, time_value: float) -> str:
-        """
-        Format time from integer format (e.g., 900) to HH:MM.
-
-        Args:
-            time_value (float): The time value to format.
-
-        Returns:
-            str: The formatted time string.
-        """
+        """Format time from integer format (e.g., 900) to HH:MM."""
         if time_value == 0:
             return "N/A"
-        
-        # Convert the time format (e.g., 900) to total minutes
         total_minutes = Schedule.time_format_to_minutes(int(time_value))
-
-        # Now format the total minutes as HH:MM
-        h = total_minutes // 60
-        m = total_minutes % 60
-        return f"{h:02}:{m:02}"
+        return f"{total_minutes // 60:02}:{total_minutes % 60:02}"

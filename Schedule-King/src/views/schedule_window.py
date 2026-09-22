@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QSize, QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QPixmap
 from src.components.navigator import Navigator
-from src.components.schedule_table import ScheduleTable
+from src.components.schedule_table import ScheduleTable, ScheduleLegend
 from src.components.schedule_header import ScheduleHeader
 from src.components.schedule_progress import ScheduleProgress
 from src.components.full_size_window import FullSizeWindow
@@ -18,6 +18,8 @@ from src.services.schedule_event_maker import ScheduleEventMaker
 from typing import List, Optional
 import os
 from src.components.semester_choice_dialog import SemesterChoiceDialog
+from src.styles.theme import PALETTE
+from src.styles.icons import icon
 
 class ScheduleWindow(QMainWindow):
     """
@@ -37,19 +39,19 @@ class ScheduleWindow(QMainWindow):
         # Set window properties
         self.setObjectName("ScheduleWindow")
         self.setWindowTitle("Schedule King")
-        icon_path = os.path.join(os.path.dirname(__file__), "../assets/logo.ico")
+        icon_path = os.path.join(os.path.dirname(__file__), "../assets/logo.png")
         self.setWindowIcon(QIcon(icon_path))
         
         # Create main layout
         self.central_widget = QWidget()
         self.main_layout = QVBoxLayout(self.central_widget)
-        self.main_layout.setSpacing(15)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(14)
+        self.main_layout.setContentsMargins(28, 22, 28, 18)
         self.setCentralWidget(self.central_widget)
         
         # Set window size
-        self.setMinimumSize(800, 600)
-        self.resize(1920, 1080)
+        self.setMinimumSize(1100, 720)
+        self.resize(1440, 900)
         
     def setup_components(self, schedules: int , controller: ScheduleController):
         """Initialize and setup all window components"""
@@ -63,138 +65,76 @@ class ScheduleWindow(QMainWindow):
         # Initialize loading overlay and export worker
         self.loading_overlay = None
 
-        # Create header and metrics components
-        # ScheduleHeader components (back_button, title_container, export_controls) are now public attributes
+        # Header: back button, title, export controls
         self.header = ScheduleHeader(self.controller, self.handle_export)
-        self.metrics_widget = ScheduleMetrics(Schedule([])) # Initialize with empty schedule
 
-        # Create a horizontal layout for the top section (Back, Header Title, Metrics, Export)
         top_layout = QHBoxLayout()
-        top_layout.setSpacing(15)
+        top_layout.setSpacing(16)
         top_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Add Back button
-        top_layout.addWidget(self.header.back_button)
-
-        # Add Header Title container and center it with stretches
+        top_layout.addWidget(self.header.back_button, 0, Qt.AlignVCenter)
+        top_layout.addWidget(self.header.title_container, 0, Qt.AlignVCenter)
         top_layout.addStretch(1)
-        top_layout.addWidget(self.header.title_container)
-        top_layout.addStretch(1)
-
-        # Add Metrics widget
-        top_layout.addWidget(self.metrics_widget)
-
-        # Add Export controls
-        top_layout.addWidget(self.header.export_controls)
-
-        # Add the top layout to the main vertical layout (wrap in QWidget for styling if needed)
+        top_layout.addWidget(self.header.export_controls, 0, Qt.AlignVCenter)
         top_widget_container = QWidget()
-        top_widget_container.setObjectName("schedule_top_bar") # Add object name for styling if needed
+        top_widget_container.setObjectName("schedule_top_bar")
         top_widget_container.setLayout(top_layout)
         self.main_layout.addWidget(top_widget_container)
 
-        # Add separator line
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        line.setObjectName("separator_line")
-        self.main_layout.addWidget(line)
+        # Metric tiles
+        self.metrics_widget = ScheduleMetrics(Schedule([]))
+        self.main_layout.addWidget(self.metrics_widget)
 
-        # Create navigation section (progress, navigator, ranking controls, full size, refresh)
-        nav_container = QHBoxLayout()
-        nav_container.setSpacing(10)
+        # Toolbar: progress, navigator, ranking and quick actions
+        toolbar = QWidget()
+        toolbar.setObjectName("toolbar_card")
+        nav_container = QHBoxLayout(toolbar)
+        nav_container.setContentsMargins(14, 8, 14, 8)
+        nav_container.setSpacing(12)
 
-        # Add progress component
-        self.progress = ScheduleProgress()
-        nav_container.addWidget(self.progress)
-
-        # Add navigator
         self.navigator = Navigator(-1)
         self.navigator.setObjectName("compact_navigator")
         nav_container.addWidget(self.navigator)
 
-        # Add ranking controls
+        self.progress = ScheduleProgress()
+        nav_container.addWidget(self.progress)
+        nav_container.addStretch(1)
+
         self.ranking_controls = RankingControls()
         self.ranking_controls.setObjectName("ranking_controls")
         nav_container.addWidget(self.ranking_controls)
 
-        # Add full size button
-        self.full_size_button = QPushButton()
-        self.full_size_button.setObjectName("nav_button")
-        self.full_size_button.setFixedSize(36, 36)
-        full_size_icon = QIcon(os.path.join(os.path.dirname(__file__), "../assets/full_size.png"))
-        if not full_size_icon.isNull():
-            self.full_size_button.setIcon(full_size_icon)
-            self.full_size_button.setIconSize(self.full_size_button.size())
-            self.full_size_button.setText("")
-        else:
-            self.full_size_button.setText("⛶")
-            self.full_size_button.setFont(QFont("Arial", 14))
+        divider = QFrame()
+        divider.setFrameShape(QFrame.VLine)
+        divider.setStyleSheet(f"color: {PALETTE['border']};")
+        nav_container.addWidget(divider)
 
-        nav_container.addSpacing(10)
-        nav_container.addWidget(self.full_size_button)
-
-        # Add refresh button
-        self.refresh_button = QPushButton()
-        self.refresh_button.setObjectName("nav_button") # Use same object name for styling consistency
-        self.refresh_button.setFixedSize(36, 36)
-        refresh_icon_path = os.path.join(os.path.dirname(__file__), "../assets/refresh.png")
-        refresh_icon = QIcon(refresh_icon_path)
-        if not refresh_icon.isNull():
-            self.refresh_button.setIcon(refresh_icon)
-            self.refresh_button.setIconSize(self.refresh_button.size())
-            self.refresh_button.setText("")
-        else:
-            self.refresh_button.setText("↻") # Fallback text
-            self.refresh_button.setFont(QFont("Arial", 14))
-
-        nav_container.addWidget(self.refresh_button)
-
-        # Add Export to Calendar button
-        self.export_calendar_button = QPushButton()
+        self.full_size_button = self._icon_button("expand", "⛶", "Open in a full-size window")
+        self.refresh_button = self._icon_button("refresh", "↻", "Refresh the current schedule")
+        self.export_calendar_button = self._icon_button("calendar", "Export Calendar",
+                                                        "Export this schedule to Google Calendar")
         self.export_calendar_button.setObjectName("export_calendar_button")
-        self.export_calendar_button.setFixedSize(36, 36)
-        calendar_icon = QIcon(os.path.join(os.path.dirname(__file__), "../assets/calendar.png"))
-        if not calendar_icon.isNull():
-            self.export_calendar_button.setIcon(calendar_icon)
-            self.export_calendar_button.setIconSize(QSize(22, 22))
-            self.export_calendar_button.setText("")
-            self.export_calendar_button.setStyleSheet("""
-                QPushButton#export_calendar_button {
-                    background: transparent;
-                    border: none;
-                }
-                QPushButton#export_calendar_button:hover {
-                    background: rgba(66, 165, 245, 0.1);
-                    border-radius: 18px;
-                }
-                QPushButton#export_calendar_button:pressed {
-                    background: rgba(66, 165, 245, 0.2);
-                    border-radius: 18px;
-                }
-            """)
-        else:
-            self.export_calendar_button.setText("Export Calendar")
-            self.export_calendar_button.setFont(QFont("Arial", 14))
+        for button in (self.full_size_button, self.refresh_button, self.export_calendar_button):
+            nav_container.addWidget(button)
+        self.main_layout.addWidget(toolbar)
 
-        nav_container.addWidget(self.export_calendar_button)
-
-        # Add dummy spacer to balance progress width
-        dummy = QSpacerItem(250, 0, QSizePolicy.Fixed, QSizePolicy.Minimum)
-        nav_container.addSpacerItem(dummy)
-
-        # Center the navigation section
-        wrapper = QHBoxLayout()
-        wrapper.addStretch(1)
-        wrapper.addLayout(nav_container)
-        wrapper.addStretch(1)
-        self.main_layout.addLayout(wrapper)
-
-        # Create schedule table (Keep existing setup)
+        # Timetable + legend
         self.schedule_table = ScheduleTable()
         self.schedule_table.setObjectName("enhanced_table")
         self.main_layout.addWidget(self.schedule_table, 1)
-        
+
+        self.legend = ScheduleLegend()
+        self.main_layout.addWidget(self.legend)
+
+    def _icon_button(self, icon_name: str, fallback_text: str, tooltip: str) -> QPushButton:
+        button = QPushButton()
+        button.setObjectName("nav_button")
+        button.setFixedSize(40, 40)
+        button.setToolTip(tooltip)
+        button.setCursor(Qt.PointingHandCursor)
+        button.setIcon(icon(icon_name, 20, PALETTE["text"]))
+        button.setIconSize(QSize(20, 20))
+        return button
+
     def setup_connections(self):
         """Setup signal connections between components"""
         # Connect navigator signals
@@ -275,27 +215,10 @@ class ScheduleWindow(QMainWindow):
                 self.header.export_controls.export_button.setEnabled(True)
                 self.header.back_button.setEnabled(True)
 
-                # Update the metrics widget with the new schedule data
-                # Find the top layout containing the metrics widget
-                top_widget_container = self.main_layout.itemAt(0).widget()
-                if top_widget_container and isinstance(top_widget_container.layout(), QHBoxLayout):
-                    top_layout = top_widget_container.layout()
-
-                    # Remove the old metrics widget from its parent layout
-                    # Check if the old metrics widget is still in the layout before removing
-                    if top_layout.indexOf(self.metrics_widget) != -1:
-                         top_layout.removeWidget(self.metrics_widget)
-                         # Delete the old widget to free up resources
-                         self.metrics_widget.deleteLater()
-
-                # Create a new metrics widget with the updated schedule
-                self.metrics_widget = ScheduleMetrics(schedule)
-
-                # Add the new metrics widget to the top layout
-                if top_widget_container and isinstance(top_widget_container.layout(), QHBoxLayout):
-                    top_layout = top_widget_container.layout()
-                    # Insert at index 3 (after back_button, title_container_stretch, title_container_widget, title_container_stretch)
-                    top_layout.insertWidget(3, self.metrics_widget) # Insert at index 3
+                # Update the metric tiles and the colour legend
+                self.metrics_widget.set_schedule(schedule)
+                entries = getattr(self.schedule_table, "legend_entries", None)
+                self.legend.set_entries(entries if isinstance(entries, list) else [])
 
                 # Enable the refresh button since a schedule is displayed
                 self.refresh_button.setEnabled(True)
@@ -314,6 +237,7 @@ class ScheduleWindow(QMainWindow):
         Updates the navigator, table, and export controls.
         """
         self.navigator.set_schedules(schedules_num)
+        self.header.set_schedule_count(schedules_num)
         if self.schedules != schedules_num:
             self.schedules = schedules_num
             if schedules_num > 0 and not self.first_schedule_shown:

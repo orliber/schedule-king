@@ -6,6 +6,8 @@ from PyQt5.QtGui import QIcon, QFont, QPixmap
 from src.components.export_controls import ExportControls
 from src.controllers.ScheduleController import ScheduleController
 import os
+from src.styles.theme import PALETTE
+from src.styles.icons import icon
 
 class ScheduleHeader(QWidget):
     """
@@ -28,61 +30,45 @@ class ScheduleHeader(QWidget):
         self.setLayout(header_layout) # Keep this for now, will be replaced when components are moved out
         
         # Back button (make public)
-        self.back_button = QPushButton("  Back to Course Selection")
+        self.back_button = QPushButton("  Back to courses")
         self.back_button.setObjectName("top_action_button")
-        back_icon = QIcon(os.path.join(os.path.dirname(__file__), "../assets/back.png"))
-        if not back_icon.isNull():
-            self.back_button.setIcon(back_icon)
-            self.back_button.setText(" Back to Course Selection")
-        else:
-            self.back_button.setText("← Back to Course Selection")
-            
+        self.back_button.setIcon(icon("back", 18, PALETTE["text"]))
+        self.back_button.setCursor(Qt.PointingHandCursor)
+        self.back_button.setMinimumHeight(42)
+
         # Title container (make public)
         self.title_container = QWidget()
         self.title_container.setObjectName("title_container")
-        title_layout = QVBoxLayout(self.title_container)
-        title_layout.setContentsMargins(15, 10, 15, 10)
-        title_layout.setSpacing(0)
-        
-        # Crown icon
+        title_row = QHBoxLayout(self.title_container)
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(12)
+
         crown_label = QLabel()
-        crown_pixmap = QPixmap(os.path.join(os.path.dirname(__file__), "../assets/king.png"))
+        crown_pixmap = QPixmap(os.path.join(os.path.dirname(__file__), "../assets/logo.png"))
         if not crown_pixmap.isNull():
-            crown_label.setPixmap(crown_pixmap.scaled(50, 50, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            crown_label.setPixmap(crown_pixmap.scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         else:
-            crown_label = QLabel("👑")
-            crown_label.setFont(QFont("Segoe UI Emoji", 36))
-        
-        crown_label.setAlignment(Qt.AlignCenter)
-        crown_label.setMaximumWidth(60)
-        
-        # Title text
+            crown_label.setText("👑")
+        title_row.addWidget(crown_label)
+
         title_text_layout = QVBoxLayout()
+        title_text_layout.setSpacing(0)
         self.headline = QLabel("Schedule King")
         self.headline.setObjectName("headline_label")
-        self.headline.setFont(QFont("Arial", 24, QFont.Bold))
-        
-        self.subtitle = QLabel("Plan Your Study Schedule Like a King")
+        self.subtitle = QLabel("Generating conflict-free schedules...")
         self.subtitle.setObjectName("subtitle_label")
-        self.subtitle.setFont(QFont("Arial", 16))
-        
         title_text_layout.addWidget(self.headline)
         title_text_layout.addWidget(self.subtitle)
-        
-        # Combine crown and text
-        title_row = QHBoxLayout()
-        title_row.addWidget(crown_label)
         title_row.addLayout(title_text_layout)
-        title_row.addStretch(1)
-        title_layout.addLayout(title_row)
-        
+
         # Export controls (make public)
-        self.export_controls = ExportControls( self.controller , self.export_handler)
+        self.export_controls = ExportControls(self.controller, self.export_handler)
         self.export_controls.setObjectName("export_controls_widget")
 
-        # Assemble header - This part will be removed in ScheduleWindow's layout setup
-        # header_layout.addWidget(self.back_button)
-        # header_layout.addStretch(1)
-        # header_layout.addWidget(self.title_container)
-        # header_layout.addStretch(1)
-        # header_layout.addWidget(self.export_controls)
+    def set_schedule_count(self, count: int):
+        """Show how many schedules were found under the title."""
+        if count and count > 0:
+            noun = "schedule" if count == 1 else "schedules"
+            self.subtitle.setText(f"{count:,} conflict-free {noun} found")
+        else:
+            self.subtitle.setText("Generating conflict-free schedules...")

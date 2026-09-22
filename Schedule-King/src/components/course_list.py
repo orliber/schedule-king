@@ -1,8 +1,110 @@
-from PyQt5.QtWidgets import QListWidget, QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget, QSizePolicy, QComboBox, QToolTip
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QTimer
-from PyQt5.QtGui import QFont, QCursor
+from PyQt5.QtWidgets import (
+    QListWidget, QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget, QSizePolicy,
+    QComboBox, QToolTip, QStyledItemDelegate, QStyle
+)
+from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QTimer, QRectF, QSize
+from PyQt5.QtGui import QFont, QCursor, QColor, QPainter, QPainterPath, QPen, QFontMetrics
 from typing import List, Dict, Optional, Set
 from src.models.course import Course
+from src.styles.theme import PALETTE
+
+
+class CourseItemDelegate(QStyledItemDelegate):
+    """Paints each course as a rounded card with a code pill and a selection check."""
+
+    ROW_HEIGHT = 62
+
+    def __init__(self, course_lookup, parent=None):
+        super().__init__(parent)
+        self._course_lookup = course_lookup
+
+    def sizeHint(self, option, index):
+        return QSize(option.rect.width(), self.ROW_HEIGHT)
+
+    def paint(self, painter: QPainter, option, index):
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing)
+        selected = bool(option.state & QStyle.State_Selected)
+        hovered = bool(option.state & QStyle.State_MouseOver)
+        rect = QRectF(option.rect).adjusted(2, 2, -2, -2)
+
+        if selected:
+            bg, border = QColor(PALETTE["primary_soft"]), QColor(PALETTE["primary"])
+        elif hovered:
+            bg, border = QColor(PALETTE["surface_alt"]), QColor(PALETTE["border_strong"])
+        else:
+            bg, border = QColor(PALETTE["surface"]), QColor(PALETTE["border"])
+        path = QPainterPath()
+        path.addRoundedRect(rect, 12, 12)
+        painter.fillPath(path, bg)
+        painter.setPen(QPen(border, 1.5 if selected else 1))
+        painter.drawPath(path)
+
+        code = index.data(Qt.UserRole) or ""
+        course = self._course_lookup().get(code)
+        name = course.name if course else index.data(Qt.DisplayRole)
+        subtitle = ""
+        if course is not None:
+            parts = []
+            if course.is_detailed and course.instructor:
+                parts.append(course.instructor)
+            if course.category and course.category != "default":
+                parts.append(course.category)
+            subtitle = "  ·  ".join(parts)
+
+        # Code pill
+        base_font = QFont(option.font)
+        pill_font = QFont(base_font)
+        pill_font.setBold(True)
+        pill_font.setPointSizeF(max(base_font.pointSizeF() - 1, 8))
+        fm = QFontMetrics(pill_font)
+        pill_w = max(fm.horizontalAdvance(code) + 20, 64)
+        pill = QRectF(rect.left() + 12, rect.center().y() - 12, pill_w, 24)
+        pill_path = QPainterPath()
+        pill_path.addRoundedRect(pill, 8, 8)
+        painter.fillPath(pill_path, QColor(PALETTE["primary"] if selected else PALETTE["primary_soft"]))
+        painter.setFont(pill_font)
+        painter.setPen(QColor("#FFFFFF" if selected else PALETTE["primary"]))
+        painter.drawText(pill, Qt.AlignCenter, code)
+
+        # Name + subtitle
+        text_left = pill.right() + 14
+        text_rect = QRectF(text_left, rect.top(), rect.right() - text_left - 48, rect.height())
+        name_font = QFont(base_font)
+        name_font.setWeight(QFont.DemiBold)
+        painter.setFont(name_font)
+        painter.setPen(QColor(PALETTE["text"]))
+        name_fm = QFontMetrics(name_font)
+        if subtitle:
+            painter.drawText(text_rect.adjusted(0, 6, 0, -rect.height() / 2 + 1), Qt.AlignLeft | Qt.AlignBottom,
+                             name_fm.elidedText(name, Qt.ElideRight, int(text_rect.width())))
+            sub_font = QFont(base_font)
+            sub_font.setPointSizeF(max(base_font.pointSizeF() - 1, 8))
+            painter.setFont(sub_font)
+            painter.setPen(QColor(PALETTE["text_muted"]))
+            painter.drawText(text_rect.adjusted(0, rect.height() / 2 + 3, 0, 0), Qt.AlignLeft | Qt.AlignTop,
+                             QFontMetrics(sub_font).elidedText(subtitle, Qt.ElideRight, int(text_rect.width())))
+        else:
+            painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter,
+                             name_fm.elidedText(name, Qt.ElideRight, int(text_rect.width())))
+
+        # Selection check circle
+        circle = QRectF(rect.right() - 36, rect.center().y() - 11, 22, 22)
+        if selected:
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(PALETTE["primary"]))
+            painter.drawEllipse(circle)
+            pen = QPen(QColor("#FFFFFF"), 2.2)
+            pen.setCapStyle(Qt.RoundCap)
+            painter.setPen(pen)
+            c = circle.center()
+            painter.drawLine(int(c.x() - 5), int(c.y()), int(c.x() - 1), int(c.y() + 4))
+            painter.drawLine(int(c.x() - 1), int(c.y() + 4), int(c.x() + 6), int(c.y() - 4))
+        else:
+            painter.setBrush(Qt.NoBrush)
+            painter.setPen(QPen(QColor(PALETTE["border_strong"]), 1.5))
+            painter.drawEllipse(circle)
+        painter.restore()
 
 class CourseListWidget(QListWidget):
     tooltipRequested = pyqtSignal(Course)  # Changed from str to Course
@@ -56,43 +158,17 @@ class CourseList(QWidget):
         self.category_filter.addItem("All Categories")
         layout.addWidget(self.category_filter)
         self.list_widget = CourseListWidget()
+        self.list_widget.setObjectName("course_list_widget")
         self._configure_list_widget()
         layout.addWidget(self.list_widget)
 
     def _configure_list_widget(self):
         self.list_widget.setSelectionMode(QAbstractItemView.MultiSelection)
         self.list_widget.setUniformItemSizes(True)
-        self.list_widget.setSpacing(6)
+        self.list_widget.setSpacing(3)
         self.list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        font = QFont("Segoe UI", 12)
-        font.setWeight(QFont.Medium)
-        self.list_widget.setFont(font)
-        self.list_widget.setStyleSheet("""
-            QListWidget {
-                padding: 15px;
-                border: 2px solid #C5CAE9;
-                border-radius: 12px;
-                background-color: #E8EAF6;
-                font-size: 13pt;
-                color: #283593;
-            }
-            QListWidget::item {
-                padding: 12px;
-                margin: 5px;
-                border: 1px solid #C5CAE9;
-                border-radius: 8px;
-                background-color: #FFFFFF;
-            }
-            QListWidget::item:selected {
-                background-color: #5C6BC0;
-                color: white;
-                border: 1px solid #3949AB;
-            }
-            QListWidget::item:hover {
-                background-color: #9FA8DA;
-                color: #1A237E;
-            }
-        """)
+        self.list_widget.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.list_widget.setItemDelegate(CourseItemDelegate(lambda: self._course_lookup, self.list_widget))
 
     def _connect_signals(self):
         self.category_filter.currentIndexChanged.connect(self._apply_filters)
@@ -191,6 +267,16 @@ class CourseList(QWidget):
             for code in self.selected_course_codes 
             if code in self._course_lookup
         ]
+
+    def deselect_course(self, course_code: str):
+        """Remove a single course from the selection, even if it is filtered out of view."""
+        self.selected_course_codes.discard(course_code)
+        item = self._item_lookup.get(course_code)
+        if item is not None:
+            self.list_widget.blockSignals(True)
+            item.setSelected(False)
+            self.list_widget.blockSignals(False)
+        self.selectionChanged.emit(self.get_selected_courses())
 
     def clear_selection(self):
         self.list_widget.clearSelection()

@@ -1,49 +1,59 @@
-import sys
-import os
+import argparse
 import ctypes
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QIcon
-from src.services.schedule_api import ScheduleAPI
-from src.controllers.MainConroller import MainController
+import os
+import sys
 
-if __name__ == "__main__":
-    #  Base directory 
+from src.qt_bootstrap import ensure_qt_plugins_visible
+
+ensure_qt_plugins_visible()
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication
+
+from src.controllers.MainConroller import MainController
+from src.services.schedule_api import ScheduleAPI
+from src.styles.theme import apply_theme
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Schedule King - build conflict-free study schedules")
+    parser.add_argument("--sample", action="store_true", help="start with the bundled sample course catalog loaded")
+    parser.add_argument("--windowed", action="store_true", help="start in a normal window instead of maximized")
+    return parser.parse_known_args()[0]
+
+
+def main():
+    args = parse_args()
     basedir = os.path.dirname(os.path.realpath(__file__))
 
-    # Set Windows AppUserModelID (for taskbar icon) 
-    if os.name == 'nt':
-        myappid = 'com.biu.scheduleking' 
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    # Windows taskbar icon grouping
+    if os.name == "nt":
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("com.biu.scheduleking")
 
-    # Create the QApplication
+    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app = QApplication(sys.argv)
+    app.setApplicationName("Schedule King")
 
-    # Platform-specific icon selection
-    if sys.platform == "win32":
-        icon_file = "favicon.ico"
-    elif sys.platform == "darwin":
-        icon_file = "icon.png"  # Optional: only if you create one
-    else:
-        icon_file = "icon.png"   # Optional fallback
-
-    icon_path = os.path.join(basedir, "src/assets", icon_file)
+    icon_file = "favicon.ico" if sys.platform == "win32" else "icon.png"
+    icon_path = os.path.join(basedir, "src", "assets", icon_file)
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
-    else:
-        print(f"Icon not found at: {icon_path}")
 
-    # Load and apply the stylesheet 
-    style_path = os.path.join(basedir, "src/styles/style.qss")
-    if os.path.exists(style_path):
-        with open(style_path, "r") as f:
-            app.setStyleSheet(f.read())
-    else:
-        print(f"Stylesheet not found at: {style_path}")
+    apply_theme(app)
 
-    # Initialize core logic
     api = ScheduleAPI()
-    controller = MainController(api, maximize_on_start=True, fullscreen_on_start=False)
+    controller = MainController(api, maximize_on_start=not args.windowed, fullscreen_on_start=False)
     controller.start_application()
+    if args.windowed:
+        controller.course_window.resize(1440, 900)
+    if args.sample:
+        controller.course_window.load_sample_courses()
 
-    #  Run the Qt event loop
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()

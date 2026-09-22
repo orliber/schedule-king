@@ -1,20 +1,6 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.services.academic_calender_parser import get_full_academic_year 
-
-# List of expected events for parameterized testing
-expected_events = [
-    {"title": "חופשת חנוכה", "start": datetime(2024, 12, 29), "end": datetime(2024, 12, 30)},
-    {"title": "צום י׳ בטבת", "start": datetime(2025, 1, 10), "end": datetime(2025, 1, 10)},
-    {"title": "חופשת פורים", "start": datetime(2025, 3, 13), "end": datetime(2025, 3, 14)},
-    {"title": "חופשת פסח", "start": datetime(2025, 4, 9), "end": datetime(2025, 4, 20)},
-    {"title": "יום הזיכרון ויום העצמאות", "start": datetime(2025, 4, 30), "end": datetime(2025, 5, 1)},
-    {"title": "חופשת יום ירושלים", "start": datetime(2025, 5, 26), "end": datetime(2025, 5, 26)},
-    {"title": "חופשת חג שבועות", "start": datetime(2025, 6, 1), "end": datetime(2025, 6, 3)},
-    {"title": "יום הסטודנט", "start": datetime(2025, 6, 5), "end": datetime(2025, 6, 5)},
-    {"title": "צום י\"ז תמוז", "start": datetime(2025, 7, 13), "end": datetime(2025, 7, 13)},
-    {"title": "צום ט׳ באב", "start": datetime(2025, 8, 3), "end": datetime(2025, 8, 3)},
-]
 
 def normalize(text):
     """Normalize text for comparison (e.g. geresh variations, extra spaces)"""
@@ -88,20 +74,19 @@ def test_expected_holidays_titles():
     matched = expected.intersection(titles)
     assert matched, f"Expected holiday titles not found. Found: {titles}"
 
-@pytest.mark.parametrize("expected", expected_events)
-def test_event_in_scraping_result(expected):
+def test_holidays_fall_within_academic_year():
     """
-    For each expected event, check that it appears in the holidays or semesters
-    with the correct title and dates.
+    The calendar is scraped live, so exact dates change every year. Instead of
+    hard-coding one year's dates, check that every holiday lies inside the
+    academic year described by the scraped semesters.
     """
     result = get_full_academic_year()
-    actual_events = result["holidays"] + result["semesters"]
-
-    match = next((
-        e for e in actual_events
-        if normalize(e.get("title", e.get("name", ""))) == normalize(expected["title"])
-        and e["start"] == expected["start"]
-        and e["end"] == expected["end"]
-    ), None)
-
-    assert match is not None, f"Event not found: {expected['title']} on dates {expected['start']} - {expected['end']}"
+    semesters = result["semesters"]
+    assert semesters, "No semesters were parsed"
+    year_start = min(s["start"] for s in semesters) - timedelta(days=60)
+    year_end = max(s["end"] for s in semesters)
+    for holiday in result["holidays"]:
+        assert year_start <= holiday["start"] <= year_end, (
+            f"{holiday['title']} ({holiday['start']:%Y-%m-%d}) is outside the academic year "
+            f"{year_start:%Y-%m-%d} - {year_end:%Y-%m-%d}"
+        )

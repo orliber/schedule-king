@@ -6,6 +6,8 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QIcon, QPixmap, QTransform
 from src.models.Preference import Preference, Metric
 import os
+from src.styles.theme import PALETTE
+from src.styles.icons import icon_pixmap
 
 class RankingControls(QWidget):
     """
@@ -38,7 +40,7 @@ class RankingControls(QWidget):
         self.metric_selector = QComboBox()
         self.metric_selector.setObjectName("metric_selector")
         self.metric_selector.setMinimumWidth(180)
-        self.metric_selector.setFixedHeight(32)
+        self.metric_selector.setFixedHeight(40)
         
         # Add "Random Order" option (no metric selected)
         self.metric_selector.addItem("Random Order", None)
@@ -52,7 +54,7 @@ class RankingControls(QWidget):
         # Create sort order button (ascending/descending)
         self.sort_order_button = QPushButton()
         self.sort_order_button.setObjectName("sort_order_button")
-        self.sort_order_button.setFixedSize(32, 32)
+        self.sort_order_button.setFixedSize(40, 40)
         self.sort_order_button.setCheckable(True)
         self.update_sort_order_icon()  # Set initial icon
         layout.addWidget(self.sort_order_button)
@@ -72,24 +74,14 @@ class RankingControls(QWidget):
     def update_sort_order_icon(self):
         """Update the sort order button icon based on current state"""
         # Use the down-arrow.png for both ascending and descending, flipping for ascending
-        icon_path = os.path.join(os.path.dirname(__file__), '../assets/down-arrow.png')
-        
-        if os.path.exists(icon_path):
-            pixmap = QPixmap(icon_path)
-            if not pixmap.isNull():
-                if not self.sort_order_button.isChecked(): # Ascending
-                    # Flip the pixmap vertically for ascending order
-                    transform = QTransform().rotate(180)
-                    pixmap = pixmap.transformed(transform)
-                
-                # Scale the pixmap down to a smaller size
-                self.sort_order_button.setIcon(QIcon(pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
-            else:
-                # Fallback to text if image loading fails
-                self.sort_order_button.setText("↓" if self.sort_order_button.isChecked() else "↑")
-        else:
-            # Fallback to text if file not found
-            self.sort_order_button.setText("↓" if self.sort_order_button.isChecked() else "↑")
+        pixmap = icon_pixmap("chevron_down", 18, PALETTE["text"], 2.2)
+        descending = self.sort_order_button.isChecked()
+        if not descending:
+            ratio = pixmap.devicePixelRatio()
+            pixmap = pixmap.transformed(QTransform().rotate(180))
+            pixmap.setDevicePixelRatio(ratio)
+        self.sort_order_button.setIcon(QIcon(pixmap))
+        self.sort_order_button.setToolTip("Descending order" if descending else "Ascending order")
 
     def on_preference_changed(self):
         """Handle metric selection or sort order change"""

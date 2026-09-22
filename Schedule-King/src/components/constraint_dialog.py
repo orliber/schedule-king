@@ -1,62 +1,78 @@
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox, QToolButton
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox, QToolButton, QButtonGroup
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from src.components.time_constraint_table import TimeConstraintTable
-from src.styles.ui_styles import red_button_style, green_button_style, blue_button_style
+from src.styles.theme import PALETTE
 
 
 class ConstraintDialog(QDialog):
     def __init__(self, parent=None, initial_forbidden=None, initial_preferred=None):
         super().__init__(parent)
-        self.setWindowTitle("Select Time Constraints")
+        self.setWindowTitle("Time Preferences")
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        self.setMinimumSize(950, 600)
+        self.setMinimumSize(980, 700)
 
         layout = QVBoxLayout()
-        
-        # === Header with summary and help icon ===
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(14)
+
+        # === Header: title, explanation, help ===
         header_layout = QHBoxLayout()
-        
-        # Summary label
-        self.summary_label = QLabel("")
-        self.summary_label.setAlignment(Qt.AlignCenter)
-        font = self.summary_label.font()
-        font.setPointSize(12)
-        font.setBold(True)
-        self.summary_label.setFont(font)
-        
-        # Help button (info icon)
+        titles = QVBoxLayout()
+        titles.setSpacing(2)
+        title = QLabel("Time preferences")
+        title.setObjectName("section_title")
+        subtitle = QLabel("Click or drag across the grid. Blocked hours are never scheduled; "
+                          "preferred hours raise a schedule's preference score.")
+        subtitle.setObjectName("muted")
+        subtitle.setWordWrap(True)
+        titles.addWidget(title)
+        titles.addWidget(subtitle)
+        header_layout.addLayout(titles, 1)
+
         self.help_btn = QToolButton()
-        self.help_btn.setText("ℹ️")
-        self.help_btn.setFixedSize(30, 30)
-        self.help_btn.setStyleSheet("""
-            QToolButton {
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 15px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QToolButton:hover {
-                background-color: #1976D2;
-            }
-            QToolButton:pressed {
-                background-color: #0D47A1;
-            }
+        self.help_btn.setText("?")
+        self.help_btn.setFixedSize(34, 34)
+        self.help_btn.setStyleSheet(f"""
+            QToolButton {{
+                background-color: {PALETTE['surface']};
+                color: {PALETTE['text']};
+                border: 1px solid {PALETTE['border_strong']};
+                border-radius: 17px;
+                font-size: 15px;
+                font-weight: 800;
+            }}
+            QToolButton:hover {{ background-color: {PALETTE['primary_soft']}; color: {PALETTE['primary']}; }}
         """)
-        self.help_btn.setToolTip("Click for scoring explanation")
+        self.help_btn.setToolTip("How is the preference score calculated?")
         self.help_btn.clicked.connect(self.show_scoring_help)
-        
-        # Add to header layout
-        header_layout.addStretch(1)
-        header_layout.addWidget(self.summary_label)
-        header_layout.addStretch(1)
-        header_layout.addWidget(self.help_btn)
-        
+        header_layout.addWidget(self.help_btn, 0, Qt.AlignTop)
         layout.addLayout(header_layout)
+
+        # === Mode selector (segmented control) + live summary ===
+        mode_row = QHBoxLayout()
+        mode_row.setSpacing(0)
+        self.block_btn = QPushButton("Block hours")
+        self.mode_toggle_btn = QPushButton("Prefer hours")  # checked => preferred mode
+        for i, button in enumerate((self.block_btn, self.mode_toggle_btn)):
+            button.setCheckable(True)
+            button.setCursor(Qt.PointingHandCursor)
+            button.setMinimumHeight(38)
+            button.setMinimumWidth(150)
+        group = QButtonGroup(self)
+        group.setExclusive(True)
+        group.addButton(self.block_btn)
+        group.addButton(self.mode_toggle_btn)
+        self.block_btn.setChecked(True)
+        mode_row.addWidget(self.block_btn)
+        mode_row.addWidget(self.mode_toggle_btn)
+        mode_row.addSpacing(16)
+        self.summary_label = QLabel("")
+        mode_row.addWidget(self.summary_label)
+        mode_row.addStretch(1)
+        layout.addLayout(mode_row)
 
         # === Time slot table ===
         self.table = TimeConstraintTable()
@@ -70,31 +86,24 @@ class ConstraintDialog(QDialog):
             for row, col in initial_preferred:
                 self.table.set_preferred_cell(row, col)
 
-        layout.addWidget(self.table)
-
-        # === Mode toggle ===
-        self.mode_toggle_btn = QPushButton("Mode: ❌ Forbidden")
-        self.mode_toggle_btn.setCheckable(True)
-        self.mode_toggle_btn.setChecked(False)  # Default mode
-        self.mode_toggle_btn.clicked.connect(self.toggle_mode)
-        layout.addWidget(self.mode_toggle_btn)
+        layout.addWidget(self.table, 1)
 
         # === Buttons ===
         btns = QHBoxLayout()
-
-        self.clear_all_btn = QPushButton("Clear All")
-        self.clear_all_btn.setStyleSheet(blue_button_style())
+        btns.setSpacing(10)
+        self.clear_all_btn = QPushButton("Clear all")
+        self.clear_all_btn.setProperty("variant", "danger")
         self.clear_all_btn.setCursor(Qt.PointingHandCursor)
-
-        self.ok_btn = QPushButton("OK")
-        self.ok_btn.setStyleSheet(green_button_style())
-
         self.cancel_btn = QPushButton("Cancel")
-        self.cancel_btn.setStyleSheet(red_button_style())
-
+        self.cancel_btn.setCursor(Qt.PointingHandCursor)
+        self.ok_btn = QPushButton("Save preferences")
+        self.ok_btn.setProperty("variant", "primary")
+        self.ok_btn.setCursor(Qt.PointingHandCursor)
+        self.ok_btn.setDefault(True)
         btns.addWidget(self.clear_all_btn)
-        btns.addWidget(self.ok_btn)
+        btns.addStretch(1)
         btns.addWidget(self.cancel_btn)
+        btns.addWidget(self.ok_btn)
         layout.addLayout(btns)
 
         self.setLayout(layout)
@@ -103,6 +112,8 @@ class ConstraintDialog(QDialog):
         self.clear_all_btn.clicked.connect(self._clear_all_constraints)
         self.ok_btn.clicked.connect(self.accept)
         self.cancel_btn.clicked.connect(self.reject)
+        self.block_btn.clicked.connect(self.toggle_mode)
+        self.mode_toggle_btn.clicked.connect(self.toggle_mode)
 
         self.update_summary()
         self.toggle_mode()  # apply default style
@@ -142,17 +153,24 @@ You mark 10 preferred slots → System schedules 7 classes in preferred slots �
         
         help_dialog.exec_()
 
+    def _segment_style(self, active: bool, color: str, soft: str, left: bool) -> str:
+        radius = ("border-top-left-radius: 10px; border-bottom-left-radius: 10px; "
+                  "border-top-right-radius: 0; border-bottom-right-radius: 0;") if left else (
+                  "border-top-right-radius: 10px; border-bottom-right-radius: 10px; "
+                  "border-top-left-radius: 0; border-bottom-left-radius: 0;")
+        if active:
+            return f"QPushButton {{ background-color: {soft}; color: {color}; border: 1.5px solid {color}; {radius} }}"
+        return (f"QPushButton {{ background-color: {PALETTE['surface']}; color: {PALETTE['text_muted']}; "
+                f"border: 1px solid {PALETTE['border_strong']}; {radius} }}")
+
     def toggle_mode(self):
-        """Toggle between forbidden and preferred mode."""
-        if self.mode_toggle_btn.isChecked():
-            self.table.mark_mode = 'preferred'
-            self.mode_toggle_btn.setText("Mode: ✅ Preferred")
-            self.mode_toggle_btn.setStyleSheet("background-color: rgb(144, 238, 144); color: white; font-weight: bold;")
-        else:
-            self.table.mark_mode = 'forbidden'
-            self.mode_toggle_btn.setText("Mode: ❌ Forbidden")
-            self.mode_toggle_btn.setStyleSheet("background-color: rgb(255, 105, 97); color: white; font-weight: bold;")
-    
+        """Switch between marking blocked (forbidden) and preferred hours."""
+        preferred = self.mode_toggle_btn.isChecked()
+        self.table.mark_mode = 'preferred' if preferred else 'forbidden'
+        self.block_btn.setChecked(not preferred)
+        self.block_btn.setStyleSheet(self._segment_style(not preferred, "#E11D48", "#FFE4E6", True))
+        self.mode_toggle_btn.setStyleSheet(self._segment_style(preferred, PALETTE["success"], PALETTE["success_soft"], False))
+
     def _clear_all_constraints(self):
         """Clear all cell markings."""
         self.table.clear_constraints()
@@ -162,8 +180,10 @@ You mark 10 preferred slots → System schedules 7 classes in preferred slots �
         """Update the label showing how many cells are selected per type."""
         forbidden_count = len(self.table.forbidden)
         preferred_count = len(self.table.preferred)
-        self.summary_label.setText(f"❌ Forbidden: {forbidden_count}    ✅ Preferred: {preferred_count}")
-        self.summary_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #333;")
+        self.summary_label.setText(
+            f"<span style='color:#E11D48'>●</span> {forbidden_count} blocked &nbsp;&nbsp; "
+            f"<span style='color:{PALETTE['success']}'>●</span> {preferred_count} preferred")
+        self.summary_label.setStyleSheet(f"color: {PALETTE['text_muted']}; font-weight: 600;")
 
     def get_forbidden(self):
         return set(self.table.forbidden)

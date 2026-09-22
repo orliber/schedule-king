@@ -1,161 +1,93 @@
 """
-Stylesheet definitions for UI elements.
-This module centralizes styling to avoid hardcoded styles in component classes.
+Small inline style helpers kept for components that still style labels directly.
+Colours come from the central palette in src/styles/theme.py.
 """
+from src.styles.theme import PALETTE as P
 
-# Button Styles
-def red_button_style():
-    """Return stylesheet for red buttons (e.g. Clear, Delete, Cancel)."""
-    return """
-        QPushButton {
-            background-color: #F44336;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 12px 24px;
-            font-size: 12pt;
-            font-weight: bold;
-            min-width: 120px;
-        }
-        QPushButton:hover {
-            background-color: #D32F2F;
-        }
-        QPushButton:pressed {
-            background-color: #B71C1C;
-        }
+
+def _button(bg, hover, pressed, fg="#FFFFFF", border=None):
+    border = border or bg
+    return f"""
+        QPushButton {{
+            background-color: {bg};
+            color: {fg};
+            border: 1px solid {border};
+            border-radius: 10px;
+            padding: 9px 18px;
+            font-weight: 600;
+        }}
+        QPushButton:hover {{ background-color: {hover}; }}
+        QPushButton:pressed {{ background-color: {pressed}; }}
     """
+
+
+def red_button_style():
+    """Destructive action (Clear, Delete)."""
+    return _button(P["surface"], P["danger_soft"], "#FEE2E2", fg=P["danger"], border="#FECACA")
+
 
 def green_button_style():
-    """Return stylesheet for green buttons (e.g. Submit, Generate, Confirm)."""
-    return """
-        QPushButton {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 12px 24px;
-            font-size: 12pt;
-            font-weight: bold;
-            min-width: 180px;
-        }
-        QPushButton:hover {
-            background-color: #388E3C;
-        }
-        QPushButton:pressed {
-            background-color: #1B5E20;
-        }
-    """
+    """Main call to action (Generate, Confirm)."""
+    return _button(P["primary"], P["primary_hover"], P["primary_pressed"])
+
 
 def blue_button_style():
-    """Return stylesheet for blue buttons (e.g. Load, Info, Secondary actions)."""
-    return """
-        QPushButton {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 12px 24px;
-            font-size: 12pt;
-            font-weight: bold;
-            min-width: 150px;
-        }
-        QPushButton:hover {
-            background-color: #1976D2;
-        }
-        QPushButton:pressed {
-            background-color: #0D47A1;
-        }
-    """
+    """Secondary action (Load, Info)."""
+    return _button(P["surface"], P["surface_alt"], P["border"], fg=P["text"], border=P["border_strong"])
+
 
 def disabled_button_style():
-    """Return stylesheet for disabled buttons."""
-    return """
-        QPushButton {
-            background-color: #9E9E9E;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 12px 24px;
-            font-size: 12pt;
-            font-weight: bold;
-            min-width: 180px;
-        }
-    """
+    return _button(P["primary_soft_border"], P["primary_soft_border"], P["primary_soft_border"])
 
-# Label Styles
+
 def title_label_style():
-    """Return stylesheet for title labels."""
-    return """
-        QLabel {
-            color: #1A237E;
-            font-size: 34px;
-            font-weight: 800;
-            font-family: 'Segoe UI', sans-serif;
-            border-bottom: 3px solid #C5CAE9;
-            padding-bottom: 12px;
-        }
-    """
+    return f"QLabel {{ color: {P['text']}; font-size: 18px; font-weight: 700; }}"
+
 
 def warning_label_style():
-    """Return stylesheet for warning labels."""
-    return "color: #F44336; font-size: 11pt; font-weight: bold;"
+    return f"color: {P['warning']}; font-size: 12px; font-weight: 600;"
+
 
 def success_label_style():
-    """Return stylesheet for success labels."""
-    return "color: #4CAF50; font-size: 11pt; font-weight: bold;"
+    return f"color: {P['text_muted']}; font-size: 12px; font-weight: 600;"
+
 
 def instruction_label_style():
-    """Return stylesheet for instruction labels."""
-    return "color: #3A3A3A; font-size: 12pt; font-style: italic;"
+    return f"color: {P['text_muted']}; font-size: 13px;"
+
 
 def footer_label_style():
-    """Return stylesheet for footer labels."""
-    return "color: #78909C; font-size: 10pt; margin-top: 20px;"
+    return f"color: {P['text_subtle']}; font-size: 12px;"
+
 
 def headline_label_style():
-    """Return stylesheet for main headline labels."""
-    return """
-        QLabel {
-            color: #1A237E;
-            font-size: 24px;
-            font-weight: bold;
-            font-family: 'Segoe UI', sans-serif;
-        }
-    """
+    return f"QLabel {{ color: {P['text']}; font-size: 24px; font-weight: 800; }}"
+
 
 def subtitle_label_style():
-    """Return stylesheet for subtitle labels."""
-    return """
-        QLabel {
-            color: #3A3A3A;
-            font-size: 16px;
-            font-family: 'Segoe UI', sans-serif;
-        }
-    """
+    return f"QLabel {{ color: {P['text_muted']}; font-size: 14px; }}"
 
-# Background Styles
+
 def course_selector_background():
-    """Return stylesheet for the course selector background."""
-    return "background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #E3F2FD, stop:1 #F0F7FF); border-radius: 10px;"
+    return ""
+
 
 def schedule_background():
-    """Return stylesheet for the schedule window background."""
-    return "background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F5F5F5, stop:1 #FFFFFF);"
+    return f"background-color: {P['bg']};"
 
-# Table Styles
+
 def table_cell_style(event_class, bg_color, border_color, is_start=False, is_end=False):
     """Generate table cell style for schedule events."""
-    border_style = ""
+    radius = ""
     if is_start:
-        border_style = f"border-top-left-radius: 4px; border-top-right-radius: 4px;"
+        radius += "border-top-left-radius: 8px; border-top-right-radius: 8px;"
     if is_end:
-        border_style += f"border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;"
-    
+        radius += "border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;"
     return f"""
         QLabel {{
             background-color: {bg_color};
             border-left: 4px solid {border_color};
-            {border_style}
+            {radius}
             padding: 3px;
         }}
-    """ 
+    """

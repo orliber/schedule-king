@@ -24,17 +24,9 @@ class TimeConstraintTable(QTableWidget):
         self.setMinimumSize(900, 500)
         self.setShowGrid(True)
 
-        # Style the vertical header to look like blue rectangles with white text
-        self.verticalHeader().setStyleSheet("""
-            QHeaderView::section {
-                background-color: #2196F3;
-                color: white;
-                font-weight: bold;
-                font-size: 15px;
-                border: 1px solid #1976D2;
-                padding: 4px;
-            }
-        """)
+        self.verticalHeader().setFixedWidth(120)
+        self.verticalHeader().setDefaultAlignment(Qt.AlignCenter)
+        self.setFocusPolicy(Qt.NoFocus)
 
         self.forbidden = set()
         self.preferred = set()
@@ -76,7 +68,7 @@ class TimeConstraintTable(QTableWidget):
             if mode == 'add' and key not in self.forbidden:
                 self.forbidden.add(key)
                 self.preferred.discard(key)
-                self._color_cell(row, col, QColor(255, 105, 97, 160))  # red
+                self._color_cell(row, col, QColor(251, 113, 133, 160))  # red
                 self.cell_toggled.emit()
             elif mode == 'remove' and key in self.forbidden:
                 self.forbidden.remove(key)
@@ -87,7 +79,7 @@ class TimeConstraintTable(QTableWidget):
             if mode == 'add' and key not in self.preferred:
                 self.preferred.add(key)
                 self.forbidden.discard(key)
-                self._color_cell(row, col, QColor(144, 238, 144, 160))  # green
+                self._color_cell(row, col, QColor(74, 222, 128, 160))  # green
                 self.cell_toggled.emit()
             elif mode == 'remove' and key in self.preferred:
                 self.preferred.remove(key)
@@ -107,13 +99,13 @@ class TimeConstraintTable(QTableWidget):
         key = (row, col)
         self.forbidden.add(key)
         self.preferred.discard(key)
-        self._color_cell(row, col, QColor(255, 105, 97, 160))
+        self._color_cell(row, col, QColor(251, 113, 133, 160))
 
     def set_preferred_cell(self, row, col):
         key = (row, col)
         self.preferred.add(key)
         self.forbidden.discard(key)
-        self._color_cell(row, col, QColor(144, 238, 144, 160))
+        self._color_cell(row, col, QColor(74, 222, 128, 160))
 
     def clear_constraints(self):
         """Clear all constraints and reset table visual state"""

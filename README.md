@@ -1,180 +1,143 @@
-# Schedule King
+<p align="center">
+  <img src="Schedule-King/src/assets/logo.png" width="120" alt="Schedule King mascot">
+</p>
 
-A modern, user-friendly application for building student study schedules. Schedule King enables students to select courses, generate all possible conflict-free schedules, and export them in various formats. The application features a polished PyQt5 interface and supports both local and online course data sources.
+<h1 align="center">Schedule King</h1>
+
+<p align="center">
+  Pick your courses and get <b>every conflict-free timetable</b> in seconds - then rank, compare and export them.
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/05-schedules.png" alt="Schedule King - generated timetable" width="900">
+</p>
+
+---
+
+## Quick start - one command
+
+```bash
+./run.sh            # macOS / Linux
+run.bat             # Windows
+```
+
+The first run creates a virtual environment, installs the dependencies and launches the app. Later runs start immediately.
+
+| Command | What it does |
+|---|---|
+| `./run.sh` | Set up (first time only) and launch the app |
+| `./run.sh --sample` | Launch with the bundled sample catalog already loaded |
+| `./run.sh test` | Run the full test suite headless |
+| `./run.sh screenshots` | Regenerate the screenshots in `docs/screenshots` |
+| `./run.sh setup` | Only create or update the virtual environment |
+
+**Requirements:** Python 3.8 or newer ([python.org](https://www.python.org/downloads/)). Everything else is installed automatically.
+
+<details>
+<summary>Manual setup (without the script)</summary>
+
+```bash
+cd Schedule-King
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt     # Windows: .venv\Scripts\pip ...
+.venv/bin/python main.py                       # add --sample to preload demo data
+```
+</details>
+
+---
+
+## Screenshots
+
+| Start screen | Choose a course source |
+|---|---|
+| ![Welcome](docs/screenshots/01-welcome.png) | ![Load dialog](docs/screenshots/02-load-dialog.png) |
+
+| Course selection | Time preferences |
+|---|---|
+| ![Course selection](docs/screenshots/03-course-selection.png) | ![Time preferences](docs/screenshots/04-time-preferences.png) |
+
+| Generated schedules | Ranked by a metric |
+|---|---|
+| ![Schedules](docs/screenshots/05-schedules.png) | ![Ranked](docs/screenshots/06-ranked.png) |
 
 ---
 
 ## Features
 
-- **Intuitive Course Selection**: Load course data from a local file or fetch from the ChoiceFreak global database.
-- **Automatic Schedule Generation**: Instantly generate all possible conflict-free schedules based on your selected courses and constraints.
-- **Conflict Checking**: Ensures no time or room conflicts exist in generated schedules.
-- **Advanced Constraints**: Specify forbidden and preferred time slots to tailor your schedule.
-- **Schedule Ranking**: Sort and rank schedules by custom metrics (e.g., compactness, free days, etc.).
-- **Export Options**: Export schedules in text, Excel, or calendar formats.
-- **Modern UI**: Built with PyQt5, featuring a responsive, modular, and visually appealing interface.
+- **Load courses your way:** a local `.txt` / `.xlsx` file, the online ChoiceFreak catalog, or the built-in **sample data**.
+- **Search and filter** by name, code or category, with up to 7 courses per plan.
+- **Time preferences:** click or drag over the week grid to *block* hours (never scheduled) or *prefer* hours (raises the preference score).
+- **Every conflict-free combination:** generated in a background process with live progress.
+- **Rank schedules** by active days, number of gaps, gap hours, average start / end time, or preference match, ascending or descending.
+- **Readable timetable:** each course has its own colour with a matching legend, and you get metric tiles for the current schedule plus a full-screen view.
+- **Export** to text, Excel (one styled sheet per schedule) or straight to Google Calendar.
+
+## How to use
+
+1. **Load courses:** click *Load Courses* (or *Try sample data* on the start screen).
+2. **Select courses:** click courses in the catalog. They appear under *Your Selection*, and the `✕` button removes one.
+3. **(Optional) Time preferences:** block or prefer hours.
+4. **Generate Schedules:** browse with the arrows, jump to a number, or sort by a metric.
+5. **Export:** save the current schedule (or the next 100) to `.txt` / `.xlsx`, or send it to Google Calendar.
 
 ---
 
-## Requirements
+## Course file format (`.txt`)
 
-- **Python**: Version 3.8 or higher
-  - Download Python from [python.org](https://www.python.org/downloads/)
-  - Ensure "Add Python to PATH" is checked during installation
-  - Verify installation:
-    ```bash
-    python --version
-    ```
-- **Dependencies**: Listed in `requirements.txt` (see Installation)
-
----
-
-## Project Structure
+Courses are separated by `$$$$`. Each block has the name, code, instructor, and one line per session option:
 
 ```
-Schedule-King/
-├── src/
-│   ├── assets/           # Static assets (icons, images)
-│   ├── components/       # Reusable UI components
-│   ├── controllers/      # Application controllers (logic)
-│   ├── interfaces/       # Interface definitions
-│   ├── models/           # Core data models
-│   ├── services/         # Business logic, scheduling, export, APIs
-│   ├── styles/           # UI stylesheets (QSS, style helpers)
-│   └── views/            # Main UI windows (course selection, schedule view)
-├── tests/                # Unit and integration tests
-├── main.py               # Application entry point
-├── requirements.txt      # Production dependencies
-└── dev-requirements.txt  # Development dependencies
+<Type> S,<Day>,<Start>,<End>,<Room>,<Building>
 ```
 
----
+- **Type:** `L` lecture, `T` tirgul (tutorial), `M` maabada (lab)
+- **Day:** `1` = Sunday ... `6` = Friday. Times use 24-hour format.
+- A session that meets more than once a week lists several `S,...` groups on the same line.
 
-## Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd Schedule-King
-   ```
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
-## Running the Application
-
-1. **Start the Application:**
-   ```bash
-   python main.py
-   ```
-2. **Using the Application:**
-   - The course selection window appears on launch.
-   - Click **"Select File"** to load a local course data file, or choose **"ChoiceFreak"** to fetch from the global database.
-   - Select your desired courses (multiple selection supported).
-   - Optionally, set forbidden/preferred time slots for advanced scheduling.
-   - Click **"Generate Schedules"** to create all possible conflict-free combinations.
-   - Use navigation controls to browse schedule options.
-   - Rank schedules by your preferred criteria.
-   - Export your preferred schedule(s) as text, Excel, or calendar files.
-
----
-
-## Running Tests
-
-To ensure everything is working correctly, run the tests using `pytest`:
-
-```bash
-python -m pytest
-```
-
-Or use the custom test runner:
-
-```bash
-cd tests
-python SuperTester.py
-```
-
----
-
-## Usage Overview
-
-### 1. Load Course Data
-- Click **"Select File"** to load a `.txt` file (see format below), or use **ChoiceFreak** for online data.
-- Example input files are available in `tests/test_files`.
-
-### 2. Select Courses
-- Check the boxes next to the courses you want to include.
-- The app automatically checks for conflicts between selected courses.
-
-### 3. Set Constraints (Optional)
-- Add forbidden or preferred time slots to further customize your schedule.
-
-### 4. Generate Schedules
-- Click **"Generate Schedules"** to create all possible conflict-free combinations.
-- A progress bar shows generation status.
-- Once complete, the schedule view window appears.
-
-### 5. View, Rank, and Export Schedules
-- Browse schedules using navigation controls.
-- Rank schedules by metrics (e.g., compactness, free days).
-- Export schedules as `.txt`, `.xlsx`, or calendar files (Google/iCal).
-- For large numbers of schedules, only the last 100 are exported to Excel for performance.
-
----
-
-## Input/Output Formats
-
-### Input: Course Data File (`.txt`)
-- Each course is separated by `$$$$`
-- Each course block contains:
-  - Course Name
-  - Course Code
-  - Instructor Name
-  - Schedule Details (one or more lines)
-- **Schedule Details Format:**
-  ```
-  <Session Type> <Day>,<Start Time>,<End Time>,<Room Number>,<Building Number>
-  ```
-  - **Session Type**: `L` (Lecture), `T` (Tutorial), `M` (Meeting)
-  - **Day**: `S,1` (Sunday), `S,2` (Monday), ..., `S,5` (Thursday)
-  - **Time**: 24-hour format (e.g., `09:00`)
-
-#### Example Input File:
 ```
 $$$$
 Linear Algebra
 10101
 Dr. Emmy Noether
-L S,1,09:00,11:00,1001,10
-T S,2,13:00,14:00,1002,30
-T S,4,12:00,13:00,1002,32
-$$$$
-Introduction to Programming
-10102
-Prof. Dennis Ritchie
-L S,2,08:00,10:00,2001,11
-T S,2,10:00,11:00,2002,35
-T S,3,11:00,12:00,2002,36
-M S,1,14:00,15:00,2005,46
-$$$$
+L S,2,14:00,16:00,100,504
+L S,3,08:00,10:00,108,504
+T S,1,09:00,10:00,106,504
+T S,4,09:00,10:00,103,504
 ```
 
-### Output
-- **Text file (`.txt`)**: Human-readable, formatted schedule details.
-- **Excel file (`.xlsx`)**: Styled tables, one sheet per schedule.
-- **Calendar export**: Google Calendar/iCal integration (from schedule view window).
+A full example lives in [`Schedule-King/sample_data/sample_courses.txt`](Schedule-King/sample_data/sample_courses.txt), and more are in `Schedule-King/tests/test_files/`.
 
 ---
 
-## Advanced Features
+## Project structure
 
-- **ChoiceFreak Integration**: Fetch course data from the ChoiceFreak global database.
-- **Forbidden/Preferred Slots**: Fine-tune your schedule by blocking or preferring specific times.
-- **Schedule Ranking**: Sort schedules by custom metrics (e.g., compactness, free days).
-- **Export to Calendar**: Export schedules directly to Google Calendar or iCal.
-- **Modern, Modular UI**: Built with reusable components for a seamless experience.
+```
+schedule-king/
+├── run.sh / run.bat          # one-command setup + launch
+├── docs/screenshots/         # images used in this README
+└── Schedule-King/
+    ├── main.py               # entry point (--sample, --windowed)
+    ├── requirements.txt
+    ├── sample_data/          # bundled demo course catalog
+    ├── tools/                # take_screenshots.py (headless renderer)
+    ├── src/
+    │   ├── styles/           # theme.py (design tokens + global stylesheet), icons.py (vector icons)
+    │   ├── views/            # course selection and schedule windows
+    │   ├── components/       # reusable widgets (course list, timetable, dialogs, ...)
+    │   ├── controllers/      # app flow and background workers
+    │   ├── models/           # Course, TimeSlot, Schedule, ranking
+    │   └── services/         # parsing, scheduling, export, ChoiceFreak, Google Calendar
+    └── tests/                # pytest suite (runs headless)
+```
+
+## Testing
+
+```bash
+./run.sh test
+```
+
+Qt tests run with the `offscreen` platform, so no windows open during the run.
 
 ---
+
+<p align="center">Made with ♥ by the Schedule Kings</p>
